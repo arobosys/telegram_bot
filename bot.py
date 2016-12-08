@@ -11,13 +11,16 @@ import time
 
 subscribers = []
 subscriptions_file = "./subscriptions"
+alert_time_1h = "21:00"
+alert_time_10min = "21:50"
+alert_time_start = "22:00"
 
 
 def jira_gen_task(tname):
     return str(tname) + ': https://arobosys.atlassian.net/browse/' + str(tname)
 
 dfl_pair = lambda group : (group + '-', re.compile(group + '[ -]?(\d+)', re.IGNORECASE))
-jira_task_regex = map(dfl_pair, ['AV', 'AG', 'SITE', 'RD'])
+jira_task_regex = list(map(dfl_pair, ['AV', 'AG', 'SITE', 'RD']))
 def jira_hdl_trytask(prefix, regex, msg_text):
     return "\n".join(map(lambda num: jira_gen_task(prefix + str(num)), regex.findall(msg_text)))
 def jira_hdl(chat_id, msg_text):
@@ -94,9 +97,9 @@ def send_alerts(alert_msg):
 
 def send_alerts_thr():
     print("Alert sending thread started.")
-    schedule.every().day.at("21:00").do(lambda: send_alerts("Через час дебютнём!"))
-    schedule.every().day.at("21:50").do(lambda: send_alerts("Через 10 мин дебютнём!"))
-    schedule.every().day.at("22:00").do(lambda: send_alerts("Стартуем!"))
+    schedule.every().day.at(alert_time_1h).do(lambda: send_alerts("Через час дебютнём!"))
+    schedule.every().day.at(alert_time_10min).do(lambda: send_alerts("Через 10 мин дебютнём!"))
+    schedule.every().day.at(alert_time_start).do(lambda: send_alerts("Стартуем!"))
     while 1:
         schedule.run_pending()
         time.sleep(1)
@@ -108,13 +111,13 @@ bot = telebot.TeleBot(config.token)
 bot_handlers = [poker_hdl, subscr_hdl, unsubscr_hdl, jira_hdl]
 @bot.message_handler(content_types=["text"])
 def handler(message):
-    print(str(message.chat.id))
-    msg = ''.join(map(lambda h: h(message.chat.id, message.text), bot_handlers))
-    if msg.strip() != "":
+    print("RECV: " + message.text)
+    msg = ''.join(map(lambda h: h(message.chat.id, message.text), bot_handlers)).strip()
+    if msg != "":
         bot.send_message(message.chat.id, msg)
 
 if __name__ == '__main__':
     load_subscribers()
     alert_thread = threading.Thread(target=send_alerts_thr)
-    alert_thread.start()
+#alert_thread.start()
     bot.polling(none_stop=True)
