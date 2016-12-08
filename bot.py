@@ -11,9 +11,9 @@ import time
 
 subscribers = []
 subscriptions_file = "./subscriptions"
-alert_time_1h = "21:00"
-alert_time_10min = "21:50"
-alert_time_start = "22:00"
+alert_time_1h = "15:00"
+alert_time_10min = "15:50"
+alert_time_start = "16:00"
 
 
 def jira_gen_task(tname):
