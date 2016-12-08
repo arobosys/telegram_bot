@@ -48,20 +48,20 @@ def poker_hdl(chat_id, msg_text):
             answ += "Партия завершена. Среднее: " + str(sum(pm) / len(pm))
             poker_marks.pop(chat_id, None)
     elif pm != None:
-        poker_marks[chat_id] += map(lambda num: float(num), numbers_regex.findall(msg_text))
+        poker_marks[chat_id] += map(float, numbers_regex.findall(msg_text))
 
     return answ
 
 def load_subscribers():
     global subscribers
     with open(subscriptions_file, 'r') as fl:
-        subscribers = list(map(lambda s: int(s), fl.read().splitlines()))
+        subscribers = list(map(int, fl.read().splitlines()))
 
 
 def store_subscribers():
     global subscribers
     with open(subscriptions_file, 'w') as fl:
-        fl.write("\n".join(map(lambda s: str(s), subscribers)))
+        fl.write("\n".join(map(str, subscribers)))
 
 def subscr_hdl(chat_id, msg_text):
     global subscribers
