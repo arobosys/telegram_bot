@@ -119,5 +119,5 @@ def handler(message):
 if __name__ == '__main__':
     load_subscribers()
     alert_thread = threading.Thread(target=send_alerts_thr)
-#alert_thread.start()
+    alert_thread.start()
     bot.polling(none_stop=True)
