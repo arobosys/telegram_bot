@@ -44,6 +44,7 @@ def poker_hdl(chat_id, msg_text):
             answ += "Партия не начата, нечего суммировать. См: !poker"
         elif len(pm) == 0:
             answ += "Партия завершена, сыграна впустую."
+            poker_marks.pop(chat_id, None)
         else:
             answ += "Партия завершена. Среднее: " + str(sum(pm) / len(pm))
             poker_marks.pop(chat_id, None)
