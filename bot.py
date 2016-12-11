@@ -11,9 +11,9 @@ import time
 
 subscribers = []
 subscriptions_file = "./subscriptions"
-alert_time_1h = "21:00"
-alert_time_10min = "21:50"
-alert_time_start = "22:00"
+alert_time_1h = "14:00"
+alert_time_10min = "14:50"
+alert_time_start = "15:00"
 
 
 def jira_gen_task(tname):
@@ -120,5 +120,5 @@ def handler(message):
 if __name__ == '__main__':
     load_subscribers()
     alert_thread = threading.Thread(target=send_alerts_thr)
-#alert_thread.start()
+    alert_thread.start()
     bot.polling(none_stop=True)
