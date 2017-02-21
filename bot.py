@@ -23,13 +23,16 @@ dfl_pair = lambda group : (group + '-', re.compile(group + '[ -]?(\d+)', re.IGNO
 jira_task_regex = list(map(dfl_pair, ['AV', 'AG', 'SITE', 'RD']))
 def jira_hdl_trytask(prefix, regex, msg_text):
     return "\n".join(map(lambda num: jira_gen_task(prefix + str(num)), regex.findall(msg_text)))
-def jira_hdl(chat_id, msg_text):
-    return "\n".join(map(lambda p: jira_hdl_trytask(*p, msg_text), jira_task_regex))
+def jira_hdl(message):
+    return "\n".join(map(lambda p: jira_hdl_trytask(*p, message.text), jira_task_regex))
 
 
 poker_marks = {}
 numbers_regex = re.compile('(\d+)')
-def poker_hdl(chat_id, msg_text):
+def poker_hdl(message):
+    chat_id = message.chat.id
+    msg_text = message.text
+    from_id = message.from_user.id
     answ = ''
     pm = poker_marks.get(chat_id)
 
@@ -38,7 +41,7 @@ def poker_hdl(chat_id, msg_text):
         if pm != None:
             answ += "Предыдущая партия сброшена. "
         answ += "\n"
-        poker_marks[chat_id] = []
+        poker_marks[chat_id] = {}
     elif msg_text.find('!sum') == 0:
         if pm == None:
             answ += "Партия не начата, нечего суммировать. См: !poker"
@@ -46,10 +49,13 @@ def poker_hdl(chat_id, msg_text):
             answ += "Партия завершена, сыграна впустую."
             poker_marks.pop(chat_id, None)
         else:
-            answ += "Партия завершена. Среднее: " + str(sum(pm) / len(pm))
+            answ += "Партия завершена. Среднее: " + str(sum(pm.values()) / len(pm))
             poker_marks.pop(chat_id, None)
     elif pm != None:
-        poker_marks[chat_id] += map(float, numbers_regex.findall(msg_text))
+        try:
+            pm[from_id] = float(numbers_regex.findall(msg_text)[0])
+        except IndexError:
+            answ = "Че ты несешь-то вообще? Число напиши"
 
     return answ
 
@@ -64,7 +70,9 @@ def store_subscribers():
     with open(subscriptions_file, 'w') as fl:
         fl.write("\n".join(map(str, subscribers)))
 
-def subscr_hdl(chat_id, msg_text):
+def subscr_hdl(message):
+    chat_id = message.chat.id
+    msg_text = message.text
     global subscribers
     if msg_text.find('!subscribe') != 0:
         return ''
@@ -78,7 +86,9 @@ def subscr_hdl(chat_id, msg_text):
     return answ
 
 
-def unsubscr_hdl(chat_id, msg_text):
+def unsubscr_hdl(message):
+    chat_id = message.chat.id
+    msg_text = message.text
     global subscribers
     if msg_text.find('!unsubscribe') != 0:
         return ''
@@ -113,7 +123,7 @@ bot_handlers = [poker_hdl, subscr_hdl, unsubscr_hdl, jira_hdl]
 @bot.message_handler(content_types=["text"])
 def handler(message):
     print("RECV: " + message.text)
-    msg = ''.join(map(lambda h: h(message.chat.id, message.text), bot_handlers)).strip()
+    msg = ''.join(map(lambda h: h(message), bot_handlers)).strip()
     if msg != "":
         bot.send_message(message.chat.id, msg)
 
