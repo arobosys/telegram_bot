@@ -7,6 +7,7 @@ import schedule
 import threading
 import re
 import time
+import requests
 
 from telebot import types
 
@@ -16,6 +17,10 @@ subscriptions_file = "./subscriptions"
 alert_time_1h = "14:00"
 alert_time_10min = "14:50"
 alert_time_start = "15:00"
+
+OK_STR = "OK"
+HALF_OK_STR = "HALF_OK"
+FAIL_STR = "FAIL"
 
 
 def jira_gen_task(tname):
@@ -29,9 +34,9 @@ def jira_hdl(message):
     return "\n".join(map(lambda p: jira_hdl_trytask(*p, message.text), jira_task_regex))
 
 voteKeyboard = types.InlineKeyboardMarkup()
-okButton = types.InlineKeyboardButton(text="Буду", callback_data="ok")
-textButton = types.InlineKeyboardButton(text="Текст", callback_data="half_ok")
-denyButton = types.InlineKeyboardButton(text="Не буду", callback_data="fail")
+okButton = types.InlineKeyboardButton(text="Буду", callback_data=OK_STR)
+textButton = types.InlineKeyboardButton(text="Текст", callback_data=HALF_OK_STR)
+denyButton = types.InlineKeyboardButton(text="Не буду", callback_data=FAIL_STR)
 voteKeyboard.add(okButton, textButton, denyButton);
 
 poker_marks = {}
@@ -132,13 +137,14 @@ def start_alert():
     absent = []
     print(participants)
     for key, value in participants.items():
-        if value == "ok":
+        if value == OK_STR:
             alive.append(key)
-        elif value == "half_ok":
+        elif value == HALF_OK_STR:
             text.append(key)
-        elif value == "fail":
+        elif value == FAIL_STR:
             absent.append(key)
-    send_alerts("Стартуем!\n" + "Обещали прийти: " + ' '.join(alive) + "\n" + 
+    send_alerts("Стартуем!\n" + 
+        "Обещали прийти: " + ' '.join(alive) + "\n" + 
         "В текстомов режиме: " + ' '.join(text) + "\n" + 
         "Не придут: " + ' '.join(absent), None)
     participants = {}
