@@ -28,11 +28,11 @@ def jira_hdl_trytask(prefix, regex, msg_text):
 def jira_hdl(message):
     return "\n".join(map(lambda p: jira_hdl_trytask(*p, message.text), jira_task_regex))
 
-keyboard = types.InlineKeyboardMarkup()
+voteKeyboard = types.InlineKeyboardMarkup()
 okButton = types.InlineKeyboardButton(text="Буду", callback_data="ok")
 textButton = types.InlineKeyboardButton(text="Текст", callback_data="half_ok")
 denyButton = types.InlineKeyboardButton(text="Не буду", callback_data="fail")
-keyboard.add(okButton, textButton, denyButton);
+voteKeyboard.add(okButton, textButton, denyButton);
 
 poker_marks = {}
 numbers_regex = re.compile('(\d+)')
@@ -110,6 +110,14 @@ def unsubscr_hdl(message):
         store_subscribers()
     return answ
 
+def give_keyboard_hdl(message):
+    msg_text = message.text
+    answ = ''
+    if msg_text.find('!keyboard') != 0:
+        return ''
+    return '!keyboard'
+
+
 
 def send_alerts(alert_msg, keyboard):    
     for chat_id in subscribers:
@@ -133,13 +141,13 @@ def start_alert():
     send_alerts("Стартуем!\n" + "Обещали прийти: " + ' '.join(alive) + "\n" + 
         "В текстомов режиме: " + ' '.join(text) + "\n" + 
         "Не придут: " + ' '.join(absent), None)
-    participants = []
+    participants = {}
 
 def send_alerts_thr():
     print("Alert sending thread started.")
 
     schedule.every().day.at(alert_time_1h).do(lambda: send_alerts("Через час дебютнём!", None))
-    schedule.every().day.at(alert_time_10min).do(lambda: send_alerts("Через 10 мин дебютнём!", keyboard))
+    schedule.every().day.at(alert_time_10min).do(lambda: send_alerts("Через 10 мин дебютнём!", voteKeyboard))
     schedule.every().day.at(alert_time_start).do(start_alert)
 
     while 1:
@@ -150,7 +158,7 @@ def send_alerts_thr():
 # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 bot = telebot.TeleBot(config.token)
-bot_handlers = [poker_hdl, subscr_hdl, unsubscr_hdl, jira_hdl]
+bot_handlers = [poker_hdl, subscr_hdl, unsubscr_hdl, jira_hdl, give_keyboard_hdl]
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
@@ -159,13 +167,21 @@ def callback_inline(call):
         name = call.from_user.first_name
         participants[name] = call.data
 
+pokerKeyboard = types.ReplyKeyboardMarkup()  
+pokerKeyboard.row('!poker', '!sum')
+pokerKeyboard.row('1', '3', '5', '8', '13')
+pokerKeyboard.row('!subscribe', "!unsubscribe")
+
 @bot.message_handler(content_types=["text"])
 def handler(message):
     print("RECV: " + message.text)
     msg = ''.join(map(lambda h: h(message), bot_handlers)).strip()
     
     if msg != "":
-        bot.send_message(message.chat.id, msg)
+        if msg != '!keyboard':
+            bot.send_message(message.chat.id, msg)
+        else:
+            bot.send_message(message.chat.id, msg, reply_markup=pokerKeyboard)
 
 if __name__ == '__main__':
     load_subscribers()
