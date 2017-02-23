@@ -7,14 +7,14 @@ import schedule
 import threading
 import re
 import time
-import requests
+import sys
 
 from telebot import types
 
 
 subscribers = []
 subscriptions_file = "./subscriptions"
-alert_time_1h = "14:00"
+alert_time_1h = "22:17"
 alert_time_10min = "14:50"
 alert_time_start = "15:00"
 
@@ -124,8 +124,17 @@ def give_keyboard_hdl(message):
 
 alert_set = re.compile("!set_alert_(\w+)\s+(([01][0-9]|2[0-3]):([0-5][0-9]))")
 
+def updateSchedule():
+    schedule.clear()
+    schedule.every().day.at(alert_time_1h).do(lambda: send_alerts("Через час дебютнём!", None))
+    schedule.every().day.at(alert_time_10min).do(lambda: send_alerts("Через 10 мин дебютнём!", voteKeyboard))
+    schedule.every().day.at(alert_time_start).do(start_alert)
+
 def alert_set_hdl(message):
-    global alert_set
+    global alert_time_1h
+    global alert_time_10min
+    global alert_time_start
+
     msg_text = message.text
     answ = ''
     found = alert_set.search(msg_text)
@@ -135,12 +144,15 @@ def alert_set_hdl(message):
         if alert_type == '1h':
             alert_time_1h = alert_time
             answ = 'alert_1h установлен в ' + alert_time
+            updateSchedule()
         elif alert_type == '10min':
             alert_time_10min = alert_time
             answ = 'alert_10min установлен в ' + alert_time
+            updateSchedule()
         elif alert_type == 'start':
             alert_time_start = alert_time
             answ = 'alert_start установлен в ' + alert_time
+            updateSchedule()
         else:
             answ = 'Бать, тебе нормально? Нет такого алерта'
     return answ
@@ -153,9 +165,6 @@ participants = {}
 
 def start_alert():
     global participants
-    global OK_STR
-    global HALF_OK_STR
-    global FAIL_STR
 
     alive = []
     text = []
@@ -176,9 +185,7 @@ def start_alert():
 def send_alerts_thr():
     print("Alert sending thread started.")
 
-    schedule.every().day.at(alert_time_1h).do(lambda: send_alerts("Через час дебютнём!", None))
-    schedule.every().day.at(alert_time_10min).do(lambda: send_alerts("Через 10 мин дебютнём!", voteKeyboard))
-    schedule.every().day.at(alert_time_start).do(start_alert)
+    updateSchedule()
 
     while 1:
         schedule.run_pending()
@@ -213,7 +220,6 @@ helpMsg = ( "!subscribe - подписать на бота \n"
 
 @bot.message_handler(content_types=["text"])
 def handler(message):
-    global helpMsg
     print("RECV: " + message.text)
     msg = ''.join(map(lambda h: h(message), bot_handlers)).strip()
     
@@ -231,5 +237,5 @@ if __name__ == '__main__':
         try:
             bot.polling(none_stop=True)
         except Exception as ex:
-            print >> sys.stderr, str(ex)
+            print("Expeption ({0}): {1}".format(e.errno, e.strerror))
             time.sleep(15)
