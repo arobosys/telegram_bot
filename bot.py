@@ -118,11 +118,32 @@ def unsubscr_hdl(message):
 def give_keyboard_hdl(message):
     msg_text = message.text
     answ = ''
-    if msg_text.find('!keyboard') != 0:
+    if msg_text.find('!help') != 0:
         return ''
-    return '!keyboard'
+    return '!help'
 
+alert_set = re.compile("!set_alert_(\w+)\s+(([01][0-9]|2[0-3]):([0-5][0-9]))")
 
+def alert_set_hdl(message):
+    global alert_set
+    msg_text = message.text
+    answ = ''
+    found = alert_set.search(msg_text)
+    if found != None:
+        alert_type = found.group(1)
+        alert_time = found.group(2)
+        if alert_type == '1h':
+            alert_time_1h = alert_time
+            answ = 'alert_1h установлен в ' + alert_time
+        elif alert_type == '10min':
+            alert_time_10min = alert_time
+            answ = 'alert_10min установлен в ' + alert_time
+        elif alert_type == 'start':
+            alert_time_start = alert_time
+            answ = 'alert_start установлен в ' + alert_time
+        else:
+            answ = 'Бать, тебе нормально? Нет такого алерта'
+    return answ
 
 def send_alerts(alert_msg, keyboard):    
     for chat_id in subscribers:
@@ -132,10 +153,13 @@ participants = {}
 
 def start_alert():
     global participants
+    global OK_STR
+    global HALF_OK_STR
+    global FAIL_STR
+
     alive = []
     text = []
     absent = []
-    print(participants)
     for key, value in participants.items():
         if value == OK_STR:
             alive.append(key)
@@ -164,7 +188,7 @@ def send_alerts_thr():
 # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 bot = telebot.TeleBot(config.token)
-bot_handlers = [poker_hdl, subscr_hdl, unsubscr_hdl, jira_hdl, give_keyboard_hdl]
+bot_handlers = [poker_hdl, subscr_hdl, unsubscr_hdl, jira_hdl, give_keyboard_hdl, alert_set_hdl]
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
@@ -178,16 +202,26 @@ pokerKeyboard.row('!poker', '!sum')
 pokerKeyboard.row('1', '3', '5', '8', '13')
 pokerKeyboard.row('!subscribe', "!unsubscribe")
 
+helpMsg = ( "!subscribe - подписать на бота \n" 
+            "!unsubscribe - отписать от бота \n"
+            "!poker - начать партию покера \n"
+            "!sum - посчитать среднюю оценку партии \n"
+            "!set_alert_AL_TYPE TIME - установить определнный алерт на время TIME \n"
+            "AL_TYPE = 1h | 10min | start \n"
+            "!help - прислать покерную клавиатуру и выдать эту справку"
+            )
+
 @bot.message_handler(content_types=["text"])
 def handler(message):
+    global helpMsg
     print("RECV: " + message.text)
     msg = ''.join(map(lambda h: h(message), bot_handlers)).strip()
     
     if msg != "":
-        if msg != '!keyboard':
+        if msg != '!help':
             bot.send_message(message.chat.id, msg)
         else:
-            bot.send_message(message.chat.id, msg, reply_markup=pokerKeyboard)
+            bot.send_message(message.chat.id, helpMsg, reply_markup=pokerKeyboard)
 
 if __name__ == '__main__':
     load_subscribers()
@@ -196,6 +230,6 @@ if __name__ == '__main__':
     while True:
         try:
             bot.polling(none_stop=True)
-        except requests.exceptions.ConnectionError as e:
-            print >> sys.stderr, str(e)
+        except Exception as ex:
+            print >> sys.stderr, str(ex)
             time.sleep(15)
