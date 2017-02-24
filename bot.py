@@ -14,7 +14,7 @@ from telebot import types
 
 subscribers = []
 subscriptions_file = "./subscriptions"
-alert_time_1h = "22:17"
+alert_time_1h = "14:00"
 alert_time_10min = "14:50"
 alert_time_start = "15:00"
 
@@ -237,5 +237,5 @@ if __name__ == '__main__':
         try:
             bot.polling(none_stop=True)
         except Exception as ex:
-            print("Expeption ({0}): {1}".format(e.errno, e.strerror))
+            print("Expeption ({0}): {1}".format(ex.errno, ex.strerror))
             time.sleep(15)
