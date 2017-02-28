@@ -201,13 +201,16 @@ bot_handlers = [poker_hdl, subscr_hdl, unsubscr_hdl, jira_hdl, give_keyboard_hdl
 def callback_inline(call):
     global participants
     if call.message:
-        name = call.from_user.first_name
+        name = call.from_user.username
+        chat_id = call.message.chat.id
         participants[name] = call.data
+        bot.send_message(chat_id, '@' + name + " придет")
 
 pokerKeyboard = types.ReplyKeyboardMarkup()  
 pokerKeyboard.row('!poker', '!sum')
 pokerKeyboard.row('1', '3', '5', '8', '13')
 pokerKeyboard.row('!subscribe', "!unsubscribe")
+
 
 helpMsg = ( "!subscribe - подписать на бота \n" 
             "!unsubscribe - отписать от бота \n"
@@ -227,7 +230,8 @@ def handler(message):
         if msg != '!help':
             bot.send_message(message.chat.id, msg)
         else:
-            bot.send_message(message.chat.id, helpMsg, reply_markup=pokerKeyboard)
+            print("message id = " + str(message.chat.id))
+            bot.send_message(chat_id=message.chat.id, text=helpMsg, reply_markup=pokerKeyboard)
 
 if __name__ == '__main__':
     load_subscribers()
