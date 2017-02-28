@@ -8,8 +8,14 @@ import threading
 import re
 import time
 import sys
+import signal
 
 from telebot import types
+
+def signal_handler(signal, frame):
+        print('You pressed Ctrl+C!')
+        sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)
 
 
 subscribers = []
@@ -122,13 +128,35 @@ def give_keyboard_hdl(message):
         return ''
     return '!help'
 
-alert_set = re.compile("!set_alert_(\w+)\s+(([01][0-9]|2[0-3]):([0-5][0-9]))")
+alert_set = re.compile("!set_meetup_time\s+(([01][0-9]|2[0-3]):([0-5][0-9]))")
 
 def updateSchedule():
     schedule.clear()
     schedule.every().day.at(alert_time_1h).do(lambda: send_alerts("Через час дебютнём!", None))
     schedule.every().day.at(alert_time_10min).do(lambda: send_alerts("Через 10 мин дебютнём!", voteKeyboard))
     schedule.every().day.at(alert_time_start).do(start_alert)
+
+def time_to_str(hours, minutes):
+    result = ''
+    if hours < 10:
+        result += '0'
+    
+    result += str(hours)
+    result += ':'
+    if minutes < 10:
+        result += '0'
+    result += str(minutes)
+    return result
+
+def decrease_time(hours, minutes, delta):
+    minutes -= delta
+    if minutes < 0:
+        minutes += 60
+        hours -= 1
+        if hours < 0:
+            hours += 24
+
+    return (hours, minutes)
 
 def alert_set_hdl(message):
     global alert_time_1h
@@ -139,22 +167,18 @@ def alert_set_hdl(message):
     answ = ''
     found = alert_set.search(msg_text)
     if found != None:
-        alert_type = found.group(1)
-        alert_time = found.group(2)
-        if alert_type == '1h':
-            alert_time_1h = alert_time
-            answ = 'alert_1h установлен в ' + alert_time
-            updateSchedule()
-        elif alert_type == '10min':
-            alert_time_10min = alert_time
-            answ = 'alert_10min установлен в ' + alert_time
-            updateSchedule()
-        elif alert_type == 'start':
-            alert_time_start = alert_time
-            answ = 'alert_start установлен в ' + alert_time
-            updateSchedule()
-        else:
-            answ = 'Бать, тебе нормально? Нет такого алерта'
+        hours = int(found.group(2))
+        minutes = int(found.group(3))
+
+        alert_time_start = found.group(1)
+
+        tmp = decrease_time(hours, minutes, 10)
+        alert_time_10min = time_to_str(tmp[0], tmp[1])
+
+        tmp = decrease_time(hours, minutes, 50)
+        alert_time_1h = time_to_str(tmp[0], tmp[1])
+        updateSchedule()
+        answ = 'alerts: ' + alert_time_1h + ' ' + alert_time_10min + ' ' + alert_time_start
     return answ
 
 def send_alerts(alert_msg, keyboard):    
@@ -204,7 +228,13 @@ def callback_inline(call):
         name = call.from_user.username
         chat_id = call.message.chat.id
         participants[name] = call.data
-        bot.send_message(chat_id, '@' + name + " придет")
+        if call.data == OK_STR:
+            bot.send_message(chat_id, '@' + name + " придет")
+        elif call.data == HALF_OK_STR:
+            bot.send_message(chat_id, '@' + name + " будет текстом")
+        elif call.data == FAIL_STR:
+            bot.send_message(chat_id, '@' + name + " не придет")
+            
 
 pokerKeyboard = types.ReplyKeyboardMarkup()  
 pokerKeyboard.row('!poker', '!sum')
@@ -216,8 +246,7 @@ helpMsg = ( "!subscribe - подписать на бота \n"
             "!unsubscribe - отписать от бота \n"
             "!poker - начать партию покера \n"
             "!sum - посчитать среднюю оценку партии \n"
-            "!set_alert_AL_TYPE TIME - установить определнный алерт на время TIME \n"
-            "AL_TYPE = 1h | 10min | start \n"
+            "!set_meetup_time TIME- установить определнный алертов на время TIME \n"
             "!help - прислать покерную клавиатуру и выдать эту справку"
             )
 
